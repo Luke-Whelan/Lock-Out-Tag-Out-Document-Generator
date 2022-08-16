@@ -1,0 +1,346 @@
+Sub LockOutTagOutDocGenerator()
+
+'This sub generates a HEC document in a folder. It requires the correct HEC template to be in the folder already
+
+'Get equipment ID and description from cells selected in spreadsheet
+Dim count As Integer
+Dim equipId As Range
+Dim equipDescrip As Range
+Dim location As Range
+Dim numOfRows As Integer
+numOfRows = Selection.Rows.count
+ 
+Dim wordapp As Word.Application
+Set wordapp = New Word.Application
+Dim docVersion As Integer
+Dim path As String
+Dim file As String
+Dim folder As String
+Dim hecTemplateName As String
+Dim hecTemplatePath As String
+
+Dim hecNameEndings() As String
+hecNameEndings = Split("1a - E,1b - P,2a - EP,2b - E230P,2c - EE,3a - EPP,4a - EEPP,5a - EPPWW,", ",")
+
+'Folder that images and HEC document are saved in must match the name of the active sheet in the spreasheet (e.g. Group A, DM, Pascal etc.)
+folder = ActiveSheet.Name
+
+'Exact hecTemplateName will be determined later, to include template number at the end.
+hecTemplateName = "HF9786-01 Hazardous Energy Control (HEC) - "
+
+'Stop code if more than 10 rows are selected, to avoid accidental massive operation
+If numOfRows > 10 Then
+    MsgBox "More than 10 rows selected. Please select 10 or less rows and try again." & vbCrLf & vbCrLf & "Check that no rows are hidden or filtered out."
+    Exit Sub
+End If
+
+'Loop through selected rows, starting at 1st row selected
+Dim rowNum As Integer
+
+For rowNum = 1 To numOfRows
+    Set equipId = Selection.Cells(rowNum, 1)
+    Set equipDescrip = Selection.Cells(rowNum, 2)
+    Set location = Selection.Cells(rowNum, 3)
+          
+    'Create file path for current in loop
+    path = "enter your path here" & "\LOTO docs\" & folder & "\" & equipId & "\"
+
+    'Uncomment the line below to check if your filepath is correct:
+    'Debug.Print path
+    
+    'Combine path with filename
+    hecTemplatePath = path & hecTemplateName
+    
+    
+    'Check which HEC document is used and open it (search for versions ending in 1-9, e.g. "HF9786-01 Hazardous Energy Control (HEC) - 2")
+    For docVersion = 0 To 8
+    
+    'If the path is not found, the DIR function will return a zero-length string and move onto next version number
+        file = Dir$(hecTemplatePath & hecNameEndings(docVersion) & ".*")
+        If (Len(file) > 0) Then
+        Debug.Print hecTemplatePath & hecNameEndings(docVersion)
+            Name hecTemplatePath & hecNameEndings(docVersion) & ".docm" As hecTemplatePath & equipId & ".docm"
+            wordapp.Documents.Open hecTemplatePath & equipId & ".docm"
+            Exit For
+        End If
+    Next docVersion
+    
+    
+    
+    'Show what's going on in Word
+    wordapp.Visible = True
+    
+    'Set equipment ID in Word doc
+    wordapp.ActiveDocument.Bookmarks("Start").Select
+    wordapp.Selection.TypeText Text:=equipId
+    
+    'Set equipment location in Word doc
+    wordapp.ActiveDocument.Bookmarks("Location").Select
+    wordapp.Selection.TypeText Text:=location
+    
+    'Set equipment description in Word doc
+    wordapp.ActiveDocument.Bookmarks("Description").Select
+    wordapp.Selection.TypeText Text:=equipDescrip
+    If wordapp.ActiveWindow.View.SplitSpecial <> wdPaneNone Then
+            wordapp.ActiveWindow.Panes(2).Close
+    End If
+    
+    If wordapp.ActiveWindow.ActivePane.View.Type = wdNormalView Or wordapp.ActiveWindow. _
+            ActivePane.View.Type = wdOutlineView Then
+            wordapp.ActiveWindow.ActivePane.View.Type = wdPrintView
+    End If
+    
+    'Reposition cursor in preparation for image imports
+    wordapp.ActiveDocument.Bookmarks("Images").Select
+        
+'Run VBA in Word to get file path from clipboard
+wordapp.Run "imageImporterNew", path
+        
+'Iterate to next selected row in spreadsheet
+Next rowNum
+
+'Show that code has finished running
+'MsgBox ("Finished")
+    
+End Sub
+
+
+Sub templateFinder()
+
+'This sub opens a HEC document and searches for key words within the document to determine which template version it is using.
+
+On Error Resume Next
+
+
+'Get equipment ID and description from cells selected in spreadsheet
+Dim count As Integer
+Dim equipId As Range
+Dim equipDescrip As Range
+Dim location As Range
+Dim numOfRows As Integer
+numOfRows = Selection.Rows.count
+ 
+Dim wordapp As Word.Application
+Set wordapp = New Word.Application
+Dim docVersion As Integer
+Dim path As String
+Dim file As String
+Dim file2 As String
+Dim folder As String
+Dim hecTemplateName As String
+Dim hecTemplatePath As String
+Dim caseNum As Integer
+Dim templateCol As Integer
+
+Dim hecNameEndings() As String
+hecNameEndings = Split("1a - E,1b - P,2a - EP,2b - E230P,2c - EE,3a - EPP,4a - EEPP,5a - EPPWW,", ",")
+
+'Folder that images and HEC document are saved in must match the name of the active sheet in the spreasheet (e.g. Group A, B, C etc.)
+folder = ActiveSheet.Name
+
+'Exact hecTemplateName will be determined later, to include template number at the end.
+hecTemplateName = "HF9786-01 Hazardous Energy Control (HEC) - "
+
+''Stop code if more than 10 rows are selected, to avoid accidental massive operation
+'If numOfRows > 10 Then
+'    MsgBox "More than 10 rows selected. Please select 10 or less rows and try again." & vbCrLf & vbCrLf & "Check that no rows are hidden or filtered out."
+'    Exit Sub
+'End If
+
+'Loop through selected rows, starting at 1st row selected
+Dim rowNum As Integer
+
+For rowNum = 1 To numOfRows
+    Set equipId = Selection.Cells(rowNum, 1)
+    
+    Debug.Print equipId
+
+          
+    'Create file path for current in loop
+    path = "enter your path here" & folder & "\" & equipId & "\"
+
+    'Combine path with filename
+    hecTemplatePath = path & hecTemplateName
+       
+    
+    'If the path is not found, the DIR function will return a zero-length string and move onto next version number. Check for both Word file formats.
+        file = Dir$(hecTemplatePath & equipId & ".docm")
+        file2 = Dir$(hecTemplatePath & equipId & ".docx")
+        
+        'Debug.Print "file2 = " & hecTemplatePath & equipId & ".docx"
+        
+        If (Len(file) > 0) Then
+            wordapp.Documents.Open hecTemplatePath & equipId & ".docm"
+                    
+        ElseIf (Len(file2) > 0) Then
+            wordapp.Documents.Open hecTemplatePath & equipId & ".docx"
+        End If
+        
+        
+        
+    'Show what's going on in Word
+    wordapp.Visible = True
+    
+    
+    Dim searchQueryLength As Integer
+    Dim searchQuery As String
+    Dim searchQueryList() As String
+    searchQueryList = Split("230v,400v,Pneumatic,steps 1-5,P-02,Oxygen,Argon,Chilled water,steps 1-7,steps 1-8,door,nitrogen", ",")
+    Dim versionIdentifiers(11) As Integer
+    Dim searchResult(11) As Boolean
+    Dim i As Integer
+     
+    'Loop through search terms in Word doc
+    For i = 0 To 11
+    
+        'Select all text in document before each search
+        wordapp.Selection.WholeStory
+        searchQuery = searchQueryList(i)
+        wordapp.Selection.Find.Text = searchQuery
+        searchResult(i) = wordapp.Selection.Find.Execute
+
+    Next i
+      
+    templateCol = 4
+       
+    'Determine doc version based on which key words/phrases matched
+    If Len(file) + Len(file2) = 0 Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "No HEC doc found"
+    
+    ElseIf searchResult(10) Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "Custom - door"
+        
+    ElseIf searchResult(11) Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "Custom - nitrogen"
+        
+    ElseIf searchResult(1) And searchResult(2) = False And searchResult(3) = False Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "1a - E"
+        
+    ElseIf searchResult(1) And searchResult(8) And searchResult(2) Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "4a - EEPP"
+                    
+    ElseIf searchResult(1) And searchResult(2) And searchResult(5) And searchResult(6) = False And searchResult(9) = False Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "3a - EPP (Oxygen)"
+        
+    ElseIf searchResult(1) And searchResult(2) And searchResult(5) = False And searchResult(6) And searchResult(9) = False Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "3a - EPP (Argon)"
+            
+    ElseIf searchResult(2) And searchResult(1) = False And searchResult(0) = False Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "1b - P"
+            
+    ElseIf searchResult(1) And searchResult(3) And searchResult(2) = False Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "2c - EE"
+    
+    ElseIf searchResult(1) And searchResult(2) And searchResult(4) = False And searchResult(5) = False And searchResult(8) = False Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "2a - EP"
+        
+    ElseIf searchResult(0) And searchResult(2) Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "2b - E230P"
+                
+    ElseIf searchResult(1) And searchResult(2) And searchResult(7) And searchResult(9) Then
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "5a - EPPWW"
+            
+    Else
+        Cells(ActiveCell.Row + rowNum - 1, templateCol).Value = "Custom"
+             
+    End If
+    
+    '230v,400v,Pneumatic,steps 1-5,P-02,Oxygen,Argon,Chilled water,steps 1-7,steps 1-8
+    
+    If wordapp.ActiveWindow.View.SplitSpecial <> wdPaneNone Then
+            wordapp.ActiveWindow.Panes(2).Close
+    End If
+    
+    If wordapp.ActiveWindow.ActivePane.View.Type = wdNormalView Or wordapp.ActiveWindow. _
+            ActivePane.View.Type = wdOutlineView Then
+            wordapp.ActiveWindow.ActivePane.View.Type = wdPrintView
+    End If
+    
+ 
+ wordapp.ActiveDocument.Close _
+    SaveChanges:=wdPromptToSaveChanges, _
+    OriginalFormat:=wdPromptUser
+    
+    
+
+        
+'Iterate to next selected row in spreadsheet
+Next rowNum
+
+
+End Sub
+
+
+
+Sub ListFoldersInDirectory()
+
+'All credit for ListFoldersInDirectory() sub to Domenic on MrExcel.com, copying here for convenience.
+'https://www.mrexcel.com/board/threads/vba-code-to-list-folders-in-a-directory.1069956/
+
+
+    Dim objFSO As Object
+    Dim objFolders As Object
+    Dim objFolder As Object
+    Dim strDirectory As String
+    Dim arrFolders() As String
+    Dim FolderCount As Long
+    Dim FolderIndex As Long
+
+
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .InitialFileName = Application.DefaultFilePath & "\"
+        .Title = "Select Folder"
+        .Show
+        If .SelectedItems.count = 0 Then
+            Exit Sub
+        End If
+        strDirectory = .SelectedItems(1)
+    End With
+    
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objFolders = objFSO.GetFolder(strDirectory).SubFolders
+    
+    FolderCount = objFolders.count
+    
+    If FolderCount > 0 Then
+        ReDim arrFolders(1 To FolderCount)
+        FolderIndex = 0
+        For Each objFolder In objFolders
+            FolderIndex = FolderIndex + 1
+            arrFolders(FolderIndex) = objFolder.Name
+        Next objFolder
+        Worksheets.Add
+        Range("A1").Resize(FolderCount).Value = Application.Transpose(arrFolders)
+    Else
+        MsgBox "No folders found!", vbExclamation
+    End If
+    
+    Set objFSO = Nothing
+    Set objFolders = Nothing
+    Set objFolder = Nothing
+    
+End Sub
+
+Sub FolderGenerator()
+
+'Original source of this sub unclear, widely copied and pasted around various forums.
+
+Dim Rng As Range
+Dim maxRows, maxCols, r, c As Integer
+Set Rng = Selection
+maxRows = Rng.Rows.count
+maxCols = Rng.Columns.count
+For c = 1 To maxCols
+r = 1
+Do While r <= maxRows
+If Len(Dir(ActiveWorkbook.path & "\" & Rng(r, c), vbDirectory)) = 0 Then
+MkDir (ActiveWorkbook.path & "\" & Rng(r, c))
+On Error Resume Next
+End If
+r = r + 1
+Loop
+Next c
+
+End Sub
+
+
