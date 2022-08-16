@@ -1,0 +1,246 @@
+Sub bordersAndResize()
+
+  Dim objDoc As Document
+  Dim nFlowingShapes, nInlineShapes, nTextBox, nTotalShapes As Long
+  Dim objShape As Shape
+  Dim shpCanvas As Shape
+  Dim objInLineShape As InlineShape
+
+
+  Dim aspectRatio, targetAspectRatio, img1AdjustedHeight, imgMoveUp As Single
+  Dim vertCropYorN, horzCropYorN As Single
+  targetAspectRatio = 1.3333
+    
+  Dim maxNoImages As Integer
+  maxNoImages = 5
+    
+  ReDim imgHeights(maxNoImages) As Single
+  ReDim imgWidths(maxNoImages) As Single
+  ReDim imgMoveLeft(maxNoImages) As Single
+  ReDim imgCropsVertical(maxNoImages) As Double
+  ReDim imgCropsHorizontal(maxNoImages) As Double
+  ReDim imgActualVertCrops(maxNoImages) As Single
+  ReDim imgActualHorzCrops(maxNoImages) As Single
+  
+ 'Counts how many images are in document
+  Set objDoc = ActiveDocument
+  nTextBox = 0
+  For Each objShape In objDoc.Shapes
+    If objShape.Type = msoTextBox Then
+      'Number of textboxes. Need to count these so they can be subtracted from total number of images.
+      nTextBox = nTextBox + 1
+    End If
+  Next objShape
+  nFlowingShapes = objDoc.Shapes.Count
+  nInlineShapes = objDoc.InlineShapes.Count
+  nTotalShapes = nFlowingShapes - nTextBox + nInlineShapes
+
+  Select Case nTotalShapes
+  
+  'Case 1 is used if there is only one image in the document
+  Case 1
+    
+    'Searches for "steps 1-5" to determine image scaling (more steps = less space on page = smaller image). Required for case where electrical plug is used, as plugging out is a step but there is no image for the plug.
+    Dim searchQueryLength As Integer
+    Dim searchQuery As String
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    With Selection.Find
+        .Text = "steps 1-5"
+        .Replacement.Text = ""
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute
+    searchQueryLength = Len(Selection)
+    
+  'If "steps 1-5" is not in the document, set the values accordingly
+  If searchQueryLength < 2 Then
+  
+  imgAdjustedHeight = 308.40992
+  imgMoveUp = 11.90553
+  imgMoveLeft(0) = 109.98442
+
+  
+  'If "steps 1-5" is in the document, set the values accordingly
+  Else
+  imgAdjustedHeight = 274.96105
+  imgMoveUp = 11.90553
+  imgMoveLeft(0) = 109.41749
+  
+  End If
+  
+  'Case for two images. Height and vertical position (imgMoveUp) is the same for images 1 and 2
+  Case 2
+  imgAdjustedHeight = 283.4646
+  imgMoveUp = 11.6208
+  imgMoveLeft(0) = -35.433125
+  imgMoveLeft(1) = 253.41771
+  
+  'Case for three images. Height and vertical position (imgMoveUp) is the same for images 1, 2 and 3
+  Case 3
+  imgAdjustedHeight = 228.189325
+  imgMoveUp = 6.80316
+  imgMoveLeft(0) = -54.708745
+  imgMoveLeft(1) = 139.181315
+  imgMoveLeft(2) = 334.772165
+  
+  Case 4
+  imgAdjustedHeight = 181.4176
+  imgMoveUp = 17.0079
+  imgMoveLeft(0) = -54.9922
+  imgMoveLeft(1) = 87.0238
+  imgMoveLeft(2) = 228.7563
+  imgMoveLeft(3) = 371.0557
+
+  
+  Case 5
+  imgAdjustedHeight = 144.5672
+  imgMoveUp = 11.6221
+  imgMoveLeft(0) = -55.8416
+  imgMoveLeft(1) = 57.5424
+  imgMoveLeft(2) = 171.4933
+  imgMoveLeft(3) = 284.8773
+  imgMoveLeft(4) = 397.9778
+  
+  End Select
+  
+  
+ 
+  Dim i As Integer
+  For i = 0 To nTotalShapes - 1
+
+   
+    'Image Adjustments
+    
+    'Get image width and height
+    imgWidths(i) = ActiveDocument.Shapes(i + nTextBox + 1).Width
+    imgHeights(i) = ActiveDocument.Shapes(i + nTextBox + 1).Height
+    
+    aspectRatio = imgHeights(i) / imgWidths(i)
+    
+    If aspectRatio >= targetAspectRatio Then
+      vertCropYorN = 1
+      horzCropYorN = 0
+    Else
+      vertCropYorN = 0
+      horzCropYorN = 1
+    End If
+    
+    'Determine crop needed to reach target aspect ratio. Apply crop to top and bottom.
+    imgCropsVertical(i) = vertCropYorN * ((imgHeights(i) - (targetAspectRatio * imgWidths(i))) / 2)
+    ActiveDocument.Shapes(i + nTextBox + 1).PictureFormat.CropTop = imgCropsVertical(i)
+    ActiveDocument.Shapes(i + nTextBox + 1).PictureFormat.CropBottom = imgCropsVertical(i)
+    
+    imgCropsHorizontal(i) = horzCropYorN * ((imgWidths(i) - (imgHeights(i) / targetAspectRatio)) / 2)
+    ActiveDocument.Shapes(i + nTextBox + 1).PictureFormat.CropLeft = imgCropsHorizontal(i)
+    ActiveDocument.Shapes(i + nTextBox + 1).PictureFormat.CropRight = imgCropsHorizontal(i)
+    
+    'Calculate crop actually achieved. This can be different if the image has been previously modified,
+    'as the crop is calculated from original image dimensions.
+    imgActualVertCrops(i) = ((imgHeights(i) - ActiveDocument.Shapes(i + nTextBox + 1).Height) / 2)
+    imgActualHorzCrops(i) = ((imgWidths(i) - ActiveDocument.Shapes(i + nTextBox + 1).Width) / 2)
+    
+    'Calculate additional crop required to achieve target aspect ratio.
+    
+    If vertCropYorN = 1 Then
+      imgCropsVertical(i) = ((imgCropsVertical(i) / imgActualVertCrops(i)) * imgCropsVertical(i))
+    Else
+      imgCropsHorizontal(i) = ((imgCropsHorizontal(i) / imgActualHorzCrops(i)) * imgCropsHorizontal(i))
+    End If
+    
+    'Apply crop to top and bottom (or left and right), lock aspect ratio, change height, move to desired location.
+    With ActiveDocument.Shapes(i + nTextBox + 1)
+      .PictureFormat.CropBottom = imgCropsVertical(i) * vertCropYorN
+      .PictureFormat.CropTop = imgCropsVertical(i) * vertCropYorN
+      .PictureFormat.CropLeft = imgCropsHorizontal(i) * horzCropYorN
+      .PictureFormat.CropRight = imgCropsHorizontal(i) * horzCropYorN
+      .LockAspectRatio = msoTrue
+      .Height = imgAdjustedHeight
+      .Left = imgMoveLeft(i)
+      .Top = imgMoveUp
+    End With
+    
+  Next i
+  
+
+
+
+'Apply borders to all images
+Set objDoc = ActiveDocument
+ 
+  With objDoc
+    For Each objInLineShape In .InlineShapes
+      With objInLineShape.Line
+        .Style = msoLineSingle
+        .ForeColor.RGB = RGB(0, 0, 0)
+      End With
+    Next
+    For Each objShape In .Shapes
+      objShape.Fill.Solid
+      With objShape.Line
+        .Style = msoLineSingle
+        .ForeColor.RGB = RGB(0, 0, 0)
+      End With
+    Next
+  End With
+
+End Sub
+
+
+
+
+Sub imageImporterNew(path As String)
+
+Dim imageName As String
+Dim imageCollection As New Collection
+Dim imagePath As String
+Dim i As Integer
+
+'Dir function to return all files in path ending in .jpg
+imageName = Dir(path & "\" & "*.jpg")
+imageCollection.Add (imageName)
+
+i = 1
+
+Do While imageName <> ""
+    imageName = Dir
+    imageCollection.Add (imageName)
+    Debug.Print "imageCollection(" & i; "): " & imageCollection(i)
+    Debug.Print "collection = " & imageCollection.Count
+    i = i + 1
+Loop
+
+Dim numberOfImages As Integer
+numberOfImages = imageCollection.Count
+
+'Loop to remove images with filenames less than 6 characters long (including four characters in ".jpg").
+'Done in reverse to avoid issues with deleting current value, which causes images to be skipped.
+For i = numberOfImages To 1 Step -1
+Debug.Print "Len of " & imageCollection(i) & " " & Len(imageCollection(i))
+    If Len(imageCollection(i)) < 6 Then
+        Debug.Print "Removed " & imageCollection(i)
+        imageCollection.Remove (i)
+    End If
+Next i
+
+numberOfImages = imageCollection.Count
+
+'Insert images into document
+For i = 1 To numberOfImages
+ActiveDocument.Shapes.AddPicture(Anchor:=Selection.Range, FileName:= _
+        path & "\" & imageCollection(i), LinkToFile:=False, SaveWithDocument:=True).WrapFormat.Type = wdWrapNone
+Next i
+
+'Run bordersAndResize sub
+bordersAndResize
+
+End Sub
+
+
