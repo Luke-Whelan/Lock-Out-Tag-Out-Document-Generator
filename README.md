@@ -18,14 +18,14 @@ In LockOutTagOutDocGenerator() and templateFinder(), modify the file path to wor
 
 Run the script to generate LOTO documents:
 - Close the VBA editor
-- In the Excel file, select cells A2:A7 (or just one or two of the equipment IDs, such as A3:A4 etc.)
+- In the Excel file, select cells A2:A4 (or any of the equipment IDs, such as A3:A4 etc.)
 - View the macros in the worksheet (Alt + F8)
 - Double-click LockOutTagOutDocGenerator
 - The script will generate LOTO documents for the selected documents
 - Run the script again for Groups 2 and 3 as desired (see other tabs)
 
 To see which template version each piece of equipment has used, run templateFinder():
-- In the Excel file, select cells A2:A7
+- In the Excel file, select cells A2:A4
 - View the macros in the worksheet (Alt + F8)
 - Double-click templateFinder
 
