@@ -1,6 +1,7 @@
 Sub LockOutTagOutDocGenerator()
 
 'This sub generates a HEC document in a folder. It requires the correct HEC template to be in the folder already
+'Note: HEC (hazardous energy control) and LOTO (lock out tag out) have been used somewhat interchangably in these documents
 
 'Get equipment ID and description from cells selected in spreadsheet
 Dim count As Integer
